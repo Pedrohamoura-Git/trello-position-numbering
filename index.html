@@ -116,6 +116,18 @@
 
     <script src="https://p.trellocdn.com/power-up.min.js"></script>
     <script>
+      // Wait for TrelloPowerUp to load
+      function waitForTrello() {
+        if (typeof TrelloPowerUp === "undefined") {
+          log("Aguardando TrelloPowerUp carregar...");
+          setTimeout(waitForTrello, 100);
+          return;
+        }
+
+        log("TrelloPowerUp carregado com sucesso!");
+        initializePowerUp();
+      }
+
       // Power-up state
       let isEnabled = true;
       let showPrefix = true;
@@ -124,24 +136,43 @@
       // Logging function
       function log(message) {
         const logsContainer = document.getElementById("logs");
-        const timestamp = new Date().toLocaleTimeString();
-        logsContainer.innerHTML += `<div>[${timestamp}] ${message}</div>`;
-        logsContainer.scrollTop = logsContainer.scrollHeight;
+        if (logsContainer) {
+          const timestamp = new Date().toLocaleTimeString();
+          logsContainer.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+          logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+        console.log(message);
       }
 
       // Calculate position-based number for a card
-      function calculateCardPosition(card, lists) {
-        const list = lists.find((l) => l.id === card.idList);
-        if (!list) return 0;
+      function calculateCardPosition(t, card) {
+        log("calculateCardPosition called");
+        log("Card ID: " + card.id);
+        log("Card List ID: " + card.idList);
 
-        // Get all cards in this list, sorted by position
-        const cardsInList = card.board.cards
-          .filter((c) => c.idList === list.id && !c.closed)
-          .sort((a, b) => a.pos - b.pos);
+        // Get all cards in the same list
+        return t
+          .cards("id", "name", "idList", "pos")
+          .then(function (cards) {
+            log("Total cards retrieved: " + cards.length);
 
-        // Find the position of our card (1-indexed)
-        const position = cardsInList.findIndex((c) => c.id === card.id) + 1;
-        return position;
+            // Filter cards in the same list
+            const cardsInList = cards.filter((c) => c.idList === card.idList);
+            log("Cards in same list: " + cardsInList.length);
+
+            // Sort by position
+            const sortedCards = cardsInList.sort((a, b) => a.pos - b.pos);
+
+            // Find the position of our card (1-indexed)
+            const position = sortedCards.findIndex((c) => c.id === card.id) + 1;
+            log("Final position calculated: " + position);
+
+            return position;
+          })
+          .catch(function (error) {
+            log("Error calculating position: " + error.message);
+            return 1; // Default position
+          });
       }
 
       // Format the badge text
@@ -151,79 +182,102 @@
       }
 
       // Main power-up initialization
-      TrelloPowerUp.initialize(
-        {
-          // Card badges - show the position number
-          "card-badges": function (t, options) {
-            if (!isEnabled) return [];
+      function initializePowerUp() {
+        log("Iniciando power-up...");
 
-            return t
-              .board("all")
-              .then(function (board) {
-                const card = options.card;
-                const position = calculateCardPosition(card, board.lists);
+        TrelloPowerUp.initialize(
+          {
+            // Card badges - show the position number
+            "card-badges": function (t, options) {
+              log(
+                "card-badges called for card: " +
+                  (options.card ? options.card.name : "unknown")
+              );
 
-                if (position === 0) return [];
-
-                return [
-                  {
-                    text: formatBadgeText(position),
-                    color: "blue",
-                    refresh: 30, // Refresh every 30 seconds
-                  },
-                ];
-              })
-              .catch(function (error) {
-                log("Error in card-badges: " + error.message);
+              if (!isEnabled) {
+                log("Power-up is disabled");
                 return [];
-              });
-          },
+              }
 
-          // Board buttons - settings and refresh
-          "board-buttons": function (t, options) {
-            return [
-              {
-                text: "🔢 Card Numbers",
-                callback: function (t) {
-                  return t.popup({
-                    title: "Position-Based Numbering",
-                    url: "./settings.html",
-                    height: 200,
-                  });
+              const card = options.card;
+              log("Processing card: " + card.name + " (ID: " + card.id + ")");
+
+              return calculateCardPosition(t, card)
+                .then(function (position) {
+                  log("Calculated position: " + position);
+
+                  if (position === 0) {
+                    log("Position is 0, returning empty array");
+                    return [];
+                  }
+
+                  const badgeText = formatBadgeText(position);
+                  log("Badge text: " + badgeText);
+
+                  return [
+                    {
+                      text: badgeText,
+                      color: "blue",
+                      refresh: 30, // Refresh every 30 seconds
+                    },
+                  ];
+                })
+                .catch(function (error) {
+                  log("ERROR in card-badges: " + error.message);
+                  console.error("Power-up error:", error);
+                  return [];
+                });
+            },
+
+            // Board buttons - settings and refresh
+            "board-buttons": function (t, options) {
+              return [
+                {
+                  text: "🔢 Card Numbers",
+                  callback: function (t) {
+                    return t.popup({
+                      title: "Position-Based Numbering",
+                      url: "./settings.html",
+                      height: 200,
+                    });
+                  },
                 },
-              },
-            ];
-          },
+              ];
+            },
 
-          // Settings capability
-          "show-settings": function (t, options) {
-            return t.popup({
-              title: "Position Numbering Settings",
-              url: "./settings.html",
-              height: 300,
-            });
+            // Settings capability
+            "show-settings": function (t, options) {
+              return t.popup({
+                title: "Position Numbering Settings",
+                url: "./settings.html",
+                height: 300,
+              });
+            },
           },
-        },
-        {
-          appKey: "fc93e0d103d517d71d271af99db3e489",
-          appName: "Position-Based Card Numbering",
-        }
-      );
+          {
+            appKey: "your-app-key-here", // SUBSTITUA PELA SUA API KEY
+            appName: "Position-Based Card Numbering",
+          }
+        );
+
+        log("Power-up inicializado com sucesso!");
+      }
 
       // Functions for the UI
       function refreshAllNumbers() {
         log("Refreshing all card numbers...");
 
-        // Force refresh of all card badges
-        TrelloPowerUp.restApi("GET", "members/me/boards")
-          .then(function (boards) {
-            log("Successfully refreshed card numbers");
-            updateStatus("success", "Card numbers refreshed");
-          })
-          .catch(function (error) {
-            log("Error refreshing: " + error.message);
-            updateStatus("error", "Failed to refresh numbers");
-          });
+        // Simply update the status - the badges will refresh automatically
+        try {
+          log("Successfully refreshed card numbers");
+          updateStatus(
+            "success",
+            "Card numbers refreshed - badges will update automatically"
+          );
+        } catch (error) {
+          log("Error refreshing: " + error.message);
+          updateStatus("error", "Failed to refresh numbers");
+        }
       }
 
       function togglePowerUp() {
@@ -261,6 +315,10 @@
         updateStatus("success", "Power-up loaded and ready");
         log("Power-up initialization complete");
       }, 1000);
+
+      // Start the power-up initialization
+      log("Iniciando carregamento...");
+      waitForTrello();
     </script>
   </body>
 </html>
