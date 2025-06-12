@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Teste Simples - Position Numbering</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f4f5f7;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .logs {
+        background: #1e1e1e;
+        color: #00ff00;
+        padding: 15px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 15px;
+      }
+      .status {
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+        font-weight: bold;
+      }
+      .error {
+        background: #ffebee;
+        color: #c62828;
+      }
+      .success {
+        background: #e8f5e8;
+        color: #2e7d32;
+      }
+      .info {
+        background: #e3f2fd;
+        color: #1565c0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔢 Teste de Power-Up Simples</h1>
+      <p>
+        Esta é uma versão básica para testar se o Trello Power-Up está
+        funcionando.
+      </p>
+
+      <div id="status" class="status info">Status: Inicializando...</div>
+
+      <div class="logs" id="logs">
+        <div>Iniciando teste...</div>
+      </div>
+    </div>
+
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+      // Função de log
+      function log(message, type = "info") {
+        const timestamp = new Date().toLocaleTimeString();
+        const logsDiv = document.getElementById("logs");
+        logsDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        logsDiv.scrollTop = logsDiv.scrollHeight;
+
+        // Também no console
+        console.log(`[${timestamp}] ${message}`);
+      }
+
+      // Função para atualizar status
+      function updateStatus(message, type = "info") {
+        const statusDiv = document.getElementById("status");
+        statusDiv.textContent = `Status: ${message}`;
+        statusDiv.className = `status ${type}`;
+      }
+
+      // Verificar se estamos no contexto correto
+      log("Verificando contexto...");
+      log("URL atual: " + window.location.href);
+      log("User agent: " + navigator.userAgent);
+
+      // Função para aguardar o TrelloPowerUp carregar
+      let attempts = 0;
+      function waitForTrello() {
+        attempts++;
+
+        if (typeof TrelloPowerUp === "undefined") {
+          log(`Tentativa ${attempts}: TrelloPowerUp ainda não carregou`);
+
+          if (attempts > 50) {
+            // 5 segundos
+            log("ERRO: TrelloPowerUp não carregou após 5 segundos", "error");
+            updateStatus("Erro: TrelloPowerUp não carregou", "error");
+            return;
+          }
+
+          setTimeout(waitForTrello, 100);
+          return;
+        }
+
+        log("✅ TrelloPowerUp carregado com sucesso!", "success");
+        updateStatus("TrelloPowerUp carregado", "success");
+        initializePowerUp();
+      }
+
+      // Função para inicializar o power-up
+      function initializePowerUp() {
+        log("Inicializando power-up...");
+
+        try {
+          TrelloPowerUp.initialize(
+            {
+              "card-badges": function (t, options) {
+                log("🎯 card-badges chamado para: " + options.card.name);
+
+                // Buscar posição do card
+                return t
+                  .cards("id", "name", "idList", "pos")
+                  .then(function (cards) {
+                    const card = options.card;
+                    const cardsInList = cards.filter(
+                      (c) => c.idList === card.idList
+                    );
+                    const sortedCards = cardsInList.sort(
+                      (a, b) => a.pos - b.pos
+                    );
+                    const position =
+                      sortedCards.findIndex((c) => c.id === card.id) + 1;
+
+                    log(`📍 Card "${card.name}" está na posição ${position}`);
+
+                    return [
+                      {
+                        text: `#${position}`,
+                        color: "blue",
+                      },
+                    ];
+                  })
+                  .catch(function (error) {
+                    log(
+                      "❌ Erro ao calcular posição: " + error.message,
+                      "error"
+                    );
+                    return [];
+                  });
+              },
+
+              "board-buttons": function (t, options) {
+                log("🔘 board-buttons chamado");
+                return [
+                  {
+                    text: "🔢 Números",
+                    callback: function (t) {
+                      log("🔢 Botão clicado!");
+                      return t.popup({
+                        title: "Power-Up Funcionando!",
+                        url: "data:text/html,<h2>✅ Power-Up está funcionando!</h2><p>Os números devem aparecer nos cards.</p>",
+                        height: 150,
+                      });
+                    },
+                  },
+                ];
+              },
+            },
+            {
+              appKey: "fc93e0d103d517d71d271af99db3e489", // ⚠️ SUBSTITUA PELA SUA API KEY
+              appName: "Position Numbering Test",
+            }
+          );
+
+          log("✅ Power-up inicializado com sucesso!", "success");
+          updateStatus("Power-up funcionando!", "success");
+        } catch (error) {
+          log("❌ Erro ao inicializar: " + error.message, "error");
+          updateStatus("Erro na inicialização", "error");
+        }
+      }
+
+      // Começar o processo
+      log("Iniciando processo de carregamento...");
+      waitForTrello();
+    </script>
+  </body>
+</html>
