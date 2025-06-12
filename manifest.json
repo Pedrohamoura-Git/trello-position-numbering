@@ -1,0 +1,15 @@
+{
+  "name": "Position-Based Card Numbering",
+  "details": "Numbers cards based on their position within each list",
+  "author": "Your Name",
+  "capabilities": ["card-badges", "board-buttons", "show-settings"],
+  "connectors": {
+    "iframe": {
+      "url": "https://your-domain.com/index.html"
+    }
+  },
+  "icon": {
+    "url": "https://your-domain.com/icon.png"
+  },
+  "tags": ["productivity", "organization"]
+}

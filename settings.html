@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Position Numbering Settings</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: white;
+      }
+      .setting-group {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+      }
+      .setting-group:last-child {
+        border-bottom: none;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+      input[type="checkbox"] {
+        margin-right: 8px;
+      }
+      button {
+        background: #0079bf;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+      button:hover {
+        background: #005a8b;
+      }
+      .preview {
+        background: #f4f5f7;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="setting-group">
+      <label>
+        <input type="checkbox" id="show-prefix" checked />
+        Show "#" prefix on card numbers
+      </label>
+      <div class="preview">
+        Preview: <span id="preview-text">#1, #2, #3</span>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <label>
+        <input type="checkbox" id="zero-index" />
+        Start numbering from 0 instead of 1
+      </label>
+    </div>
+
+    <div class="setting-group">
+      <label>
+        <input type="checkbox" id="auto-refresh" checked />
+        Automatically update numbers when cards are moved
+      </label>
+    </div>
+
+    <button onclick="saveSettings()">Save Settings</button>
+    <button onclick="refreshNumbers()">Refresh All Numbers</button>
+
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+      const t = TrelloPowerUp.iframe();
+
+      // Load current settings
+      function loadSettings() {
+        t.get("board", "shared", "positionNumberingSettings", {
+          showPrefix: true,
+          zeroIndex: false,
+          autoRefresh: true,
+        }).then(function (settings) {
+          document.getElementById("show-prefix").checked = settings.showPrefix;
+          document.getElementById("zero-index").checked = settings.zeroIndex;
+          document.getElementById("auto-refresh").checked =
+            settings.autoRefresh;
+          updatePreview();
+        });
+      }
+
+      // Update preview text
+      function updatePreview() {
+        const showPrefix = document.getElementById("show-prefix").checked;
+        const zeroIndex = document.getElementById("zero-index").checked;
+        const start = zeroIndex ? 0 : 1;
+
+        let preview;
+        if (showPrefix) {
+          preview = `#${start}, #${start + 1}, #${start + 2}`;
+        } else {
+          preview = `${start}, ${start + 1}, ${start + 2}`;
+        }
+
+        document.getElementById("preview-text").textContent = preview;
+      }
+
+      // Save settings
+      function saveSettings() {
+        const settings = {
+          showPrefix: document.getElementById("show-prefix").checked,
+          zeroIndex: document.getElementById("zero-index").checked,
+          autoRefresh: document.getElementById("auto-refresh").checked,
+        };
+
+        t.set("board", "shared", "positionNumberingSettings", settings).then(
+          function () {
+            t.closePopup();
+          }
+        );
+      }
+
+      // Refresh all numbers
+      function refreshNumbers() {
+        // Trigger refresh of all card badges
+        t.board("all").then(function (board) {
+          // This will cause all card badges to refresh
+          console.log("Refreshing numbers for board:", board.name);
+          t.closePopup();
+        });
+      }
+
+      // Event listeners
+      document
+        .getElementById("show-prefix")
+        .addEventListener("change", updatePreview);
+      document
+        .getElementById("zero-index")
+        .addEventListener("change", updatePreview);
+
+      // Initialize
+      loadSettings();
+    </script>
+  </body>
+</html>
