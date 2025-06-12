@@ -5,11 +5,11 @@
   "capabilities": ["card-badges", "board-buttons", "show-settings"],
   "connectors": {
     "iframe": {
-      "url": "https://your-domain.com/index.html"
+      "url": "https://trello-position-numbering.vercel.app/index.html"
     }
   },
   "icon": {
-    "url": "https://your-domain.com/icon.png"
+    "url": "https://trello-position-numbering.vercel.app/icon.png"
   },
   "tags": ["productivity", "organization"]
 }
